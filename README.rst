@@ -37,7 +37,7 @@ The filtering part is done using successive `thresholding <http://docs.opencv.or
 
 License
 -------
-
+The original code was taken from Brad Montgomery and is available here: https://github.com/bradmontgomery/python-laser-tracker
 This code is MIT-licensed. You can basically do whatever you want with it.
 
 
