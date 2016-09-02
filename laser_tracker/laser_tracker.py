@@ -9,7 +9,7 @@ class LaserTracker(object):
 
     def __init__(self, cam_width=640, cam_height=480, hue_min=20, hue_max=160,
                  sat_min=100, sat_max=255, val_min=200, val_max=256,
-                 display_thresholds=False):
+                 display_thresholds=False,device_num=0):
         """
         * ``cam_width`` x ``cam_height`` -- This should be the size of the
         image coming from the camera. Default is 640x480.
@@ -38,6 +38,7 @@ class LaserTracker(object):
         self.val_min = val_min
         self.val_max = val_max
         self.display_thresholds = display_thresholds
+        self.device_num = device_num        
 
         self.capture = None  # camera capture device
         self.channels = {
@@ -60,7 +61,7 @@ class LaserTracker(object):
         # Move to (xpos,ypos) on the screen
         cv2.moveWindow(name, xpos, ypos)
 
-    def setup_camera_capture(self, device_num=1):
+    def setup_camera_capture(self, device_num):
         """Perform camera setup for the device number (default device = 0).
         Returns a reference to the camera Capture object.
 
@@ -211,6 +212,7 @@ class LaserTracker(object):
         """
         cv2.imshow('RGB_VideoFrame', frame)
         cv2.imshow('LaserPointer', self.channels['laser'])
+        cv2.imshow('Trail', self.trail)
         if self.display_thresholds:
             cv2.imshow('Thresholded_HSV_Image', img)
             cv2.imshow('Hue', self.channels['hue'])
@@ -234,7 +236,7 @@ class LaserTracker(object):
         # Set up window positions
         self.setup_windows()
         # Set up the camera capture
-        self.setup_camera_capture()
+        self.setup_camera_capture(self.device_num)
 
         while True:
             # 1. capture the current image
@@ -285,6 +287,11 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--display',
                         action='store_true',
                         help='Display Threshold Windows')
+    parser.add_argument('-D', '--device',
+                        default=0,
+                        type=int,
+                        #action='set_camera',
+                        help='Set the camera')
     params = parser.parse_args()
 
     tracker = LaserTracker(
@@ -296,6 +303,7 @@ if __name__ == '__main__':
         sat_max=params.satmax,
         val_min=params.valmin,
         val_max=params.valmax,
-        display_thresholds=params.display
+        display_thresholds=params.display,
+        device_num=params.device
     )
     tracker.run()
