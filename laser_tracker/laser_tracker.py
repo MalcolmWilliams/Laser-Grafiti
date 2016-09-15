@@ -212,6 +212,8 @@ class LaserTracker(object):
         """
         cv2.imshow('RGB_VideoFrame', frame)
         cv2.imshow('LaserPointer', self.channels['laser'])
+        cv2.namedWindow('Trail', cv2.WND_PROP_FULLSCREEN)          
+        #cv2.setWindowProperty('Trail', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
         cv2.imshow('Trail', self.trail)
         if self.display_thresholds:
             cv2.imshow('Thresholded_HSV_Image', img)
