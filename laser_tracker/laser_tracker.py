@@ -3,7 +3,7 @@ import sys
 import argparse
 import cv2
 import numpy
-
+import perspective_shift
 
 class LaserTracker(object):
 
@@ -168,7 +168,7 @@ class LaserTracker(object):
                     cv2.line(self.trail, self.previous_position, center,
                              (255, 255, 255), 2)
 
-        cv2.add(self.trail, frame, frame)
+        #cv2.add(self.trail, frame, frame)
         self.previous_position = center
 
     def detect(self, frame):
@@ -239,10 +239,13 @@ class LaserTracker(object):
         self.setup_windows()
         # Set up the camera capture
         self.setup_camera_capture(self.device_num)
-
+        # Run the screen finding routine
+        warpMatrix, size = perspective_shift.find_screen(self.capture)
         while True:
             # 1. capture the current image
-            success, frame = self.capture.read()
+            # success, frame = self.capture.read()
+            # Capture the warped image
+            success, frame = perspective_shift.get_warp(self.capture, warpMatrix, size)
             if not success:  # no image captured... end the processing
                 sys.stderr.write("Could not read camera frame. Quitting\n")
                 sys.exit(1)

@@ -4,7 +4,6 @@ import numpy as np
 import argparse
 import cv2
 
-vid = cv2.VideoCapture(1)
 
 def find_screen(vid):
     oldRect = np.zeros((4, 2), dtype = "float32")
@@ -106,23 +105,29 @@ def find_screen(vid):
         # Return the warp matrix when complete
         if cv2.waitKey(33) == ord('a'):
             cv2.destroyAllWindows()
-            return M
+            return M, (maxWidth, maxHeight)
 
 
-def show_warp(M):
-    _ , image = vid.read()
+def get_warp(vid, M, size):
+    success, image = vid.read()
 
-    warp = cv2.warpPerspective(image, M, (300, 300))
-    cv2.imshow("warp", warp)
+    warp = cv2.warpPerspective(image, M, size)
+    return success, warp
+    #cv2.imshow("warp", warp)
 
 
 
-warpMatrix = find_screen(vid)
-while (True):
-    show_warp(warpMatrix)
 
-    if cv2.waitKey(33) == ord('a'):
-        cv2.destroyAllWindows()
-        break
 
-vid.release()
+if(__name__ == "__main__"):
+    vid = cv2.VideoCapture(1)
+    warpMatrix, size = find_screen(vid)
+    while (True):
+        success, warp = get_warp(vid, warpMatrix, size)
+        cv2.imshow("warp", warp)
+
+        if cv2.waitKey(33) == ord('a'):
+            cv2.destroyAllWindows()
+            break
+
+    vid.release()
