@@ -10,9 +10,9 @@ import cv2
 
 vid = cv2.VideoCapture(1)
 
-oldRect = np.zeros((4, 2), dtype = "float32")
-
-def find_screen(vid, oldRect):
+def find_screen(vid):
+    oldRect = np.zeros((4, 2), dtype = "float32")
+    rect = np.zeros((4, 2), dtype = "float32")
     while(True):    
         _, image = vid.read()
         #image = cv2.imread(args["query"])
@@ -53,7 +53,6 @@ def find_screen(vid, oldRect):
         # our output rectangle in top-left, top-right, bottom-right,
         # and bottom-left order
         
-        rect = np.zeros((4, 2), dtype = "float32")
         if (screenCnt != None):
             pts = screenCnt.reshape(4, 2)
             rect = np.zeros((4, 2), dtype = "float32")
@@ -76,14 +75,6 @@ def find_screen(vid, oldRect):
         else:
             rect = oldRect
             
-        '''
-        rect = np.zeros((4, 2), dtype = "float32")
-        rect[0] = (0, 0)
-        rect[1] = (1000, 0)
-        rect[2] = (2000, 2000)
-        rect[3] = (0, 2000)
-        '''
-        
         # now that we have our rectangle of points, let's compute
         # the width of our new image
         (tl, tr, br, bl) = rect
@@ -135,19 +126,35 @@ def find_screen(vid, oldRect):
         
         if cv2.waitKey(33) == ord('a'):
             cv2.destroyAllWindows()
-            return rect
+            return M
 
 
-def show_warp(rect):
-    print "show_warp"
-    _, image = vid.read()
+def show_warp(M):
+#    print "show_warp"
+    
+    _ , image = vid.read()
+    #image = cv2.imread(args["query"])
+    #ratio = image.shape[0] / 300.0
+    orig = image.copy()
+    image = imutils.resize(image, height = 300)
+
+    # convert the image to grayscale, blur it, and find edges
+    # in the image
+    #gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #gray = cv2.bilateralFilter(gray, 11, 17, 17)
+    #edged = cv2.Canny(gray, 30, 200)
+    #thresh = edged.copy()
+
     '''
+
+    _, image = vid.read()
+    
     #image = cv2.imread(args["query"])
     #ratio = image.shape[0] / 300.0
     orig = image.copy()
     image = imutils.resize(image, height = 300)
     
-
+    
 
     (tl, tr, br, bl) = rect
     widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
@@ -174,16 +181,25 @@ def show_warp(rect):
     # the perspective to grab the screen
     M = cv2.getPerspectiveTransform(rect, dst)
     warp = cv2.warpPerspective(orig, M, (maxWidth, maxHeight))
+    
+    #cv2.imshow("image", image)
+    cv2.imshow("warp", imutils.resize(warp, height = 300))
     '''
-    cv2.imshow("image", image)
+    warp = cv2.warpPerspective(orig, M, (300, 300))
+    cv2.imshow("warp", warp)
+    #cv2.imshow("image", image)
+    #cv2.imshow("edge", edged)
     #cv2.imshow("warp", imutils.resize(warp, height = 300))
 
 
+    if cv2.waitKey(33) == ord('a'):
+        cv2.destroyAllWindows()
+        #return rect
 
-rect = find_screen(vid, oldRect)
-print rect
+
+warpMatrix = find_screen(vid)
 while (True):
-    show_warp(rect)
+    show_warp(warpMatrix)
 
 
 vid.release()
