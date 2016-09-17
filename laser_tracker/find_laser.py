@@ -14,6 +14,8 @@ import cv2
 import numpy
 import perspective_shift
 
+
+
 class LaserTracker(object):
 
     def __init__(self, cam_width=640, cam_height=480, hue_min=20, hue_max=160,
@@ -60,6 +62,34 @@ class LaserTracker(object):
         self.previous_position = None
         self.trail = numpy.zeros((self.cam_height, self.cam_width, 3),
                                  numpy.uint8)
+        self.createTrackbars()
+
+    def nothing(self,x):
+        pass
+    
+    def createTrackbars(self):
+        # Create a black image, a window
+        trackbars = numpy.zeros((1,512,3), numpy.uint8)
+        cv2.namedWindow('trackbars')
+
+        # create trackbars for hsv ranges
+        cv2.createTrackbar('hue_min','trackbars',0,255,self.nothing)
+        cv2.createTrackbar('hue_max','trackbars',0,255,self.nothing)
+        cv2.createTrackbar('sat_min','trackbars',0,255,self.nothing)
+        cv2.createTrackbar('sat_max','trackbars',0,255,self.nothing)
+        cv2.createTrackbar('val_min','trackbars',0,255,self.nothing)
+        cv2.createTrackbar('val_max','trackbars',0,255,self.nothing)
+        
+        # create switch for ON/OFF functionality
+        #switch = '0 : OFF \n1 : ON'
+        #cv2.createTrackbar(switch, 'image',0,1,nothing)
+
+        #while(1):
+        cv2.imshow('trackbars',trackbars)
+        #k = cv2.waitKey(1) & 0xFF
+        #if k == 27:
+        #    break
+
 
     def threshold_image(self, channel):
         if channel == "hue":
@@ -122,6 +152,14 @@ class LaserTracker(object):
         self.channels['saturation'] = s
         self.channels['value'] = v
 
+        # get current positions of four trackbars
+        self.hue_min = cv2.getTrackbarPos('hue_min','trackbars')
+        self.hue_max = cv2.getTrackbarPos('hue_max','trackbars')
+        self.sat_min = cv2.getTrackbarPos('sat_min','trackbars')
+        self.sat_max = cv2.getTrackbarPos('sat_max','trackbars')
+        self.val_min = cv2.getTrackbarPos('val_min','trackbars')
+        self.val_max = cv2.getTrackbarPos('val_max','trackbars')
+        
         # Threshold ranges of HSV components; storing the results in place
         self.threshold_image("hue")
         self.threshold_image("saturation")
@@ -144,13 +182,13 @@ class LaserTracker(object):
             self.channels['value'],
         ])
 
-        self.track(frame, self.channels['laser'])
+        #self.track(frame, self.channels['laser'])
 
-        #cv2.imshow('Thresholded_HSV_Image', img)
+        cv2.imshow('Laser', self.channels['laser'])
         cv2.imshow('Hue', self.channels['hue'])
         cv2.imshow('Saturation', self.channels['saturation'])
         cv2.imshow('Value', self.channels['value'])
-
+        cv2.imshow('frame', frame)
 
 
         return hsv_image
@@ -159,6 +197,13 @@ class LaserTracker(object):
 lt = LaserTracker()
 #frame = cv2.imread("2016-09-15-171826.jpg" ,cv2.IMREAD_COLOR)
 frame = cv2.imread("Screenshot from 2016-09-15 18-08-29.png" ,cv2.IMREAD_COLOR)
-hsv_image = lt.detect(frame)
 
-cv2.waitKey(0)
+#hsv_image = lt.detect(frame)
+#cv2.waitKey(0)
+
+while(1):
+    hsv_image = lt.detect(frame)
+    #cv2.imshow('trackbars',trackbars)
+    k = cv2.waitKey(1) & 0xFF
+    if k == 27:
+        break

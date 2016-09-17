@@ -1,5 +1,43 @@
 import cv2
 import numpy as np
+
+def nothing(x):
+    pass
+
+# Create a black image, a window
+img = np.zeros((300,512,3), np.uint8)
+cv2.namedWindow('image')
+
+# create trackbars for color change
+cv2.createTrackbar('R','image',0,255,nothing)
+cv2.createTrackbar('G','image',0,255,nothing)
+cv2.createTrackbar('B','image',0,255,nothing)
+
+# create switch for ON/OFF functionality
+switch = '0 : OFF \n1 : ON'
+cv2.createTrackbar(switch, 'image',0,1,nothing)
+
+while(1):
+    cv2.imshow('image',img)
+    k = cv2.waitKey(1) & 0xFF
+    if k == 27:
+        break
+
+    # get current positions of four trackbars
+    r = cv2.getTrackbarPos('R','image')
+    g = cv2.getTrackbarPos('G','image')
+    b = cv2.getTrackbarPos('B','image')
+    s = cv2.getTrackbarPos(switch,'image')
+
+    if s == 0:
+        img[:] = 0
+    else:
+        img[:] = [b,g,r]
+
+cv2.destroyAllWindows()
+'''
+import cv2
+import numpy as np
 import math
 
 drawing = False # true if mouse is pressed
@@ -27,7 +65,7 @@ def draw_circle(event,x,y,flags,parami):
         cv2.circle(img,(ix,iy),int(dist),(0,0,255),1)
     
     elif event == cv2.EVENT_RBUTTONDOWN:
-        print "x, y", x,y
+        #print "x, y", x,y
         #zoom in on the target x and y coords.
         #img = cv2.resize(img,(2*width, 2*height))
         res = img.copy()
@@ -54,7 +92,7 @@ def draw_circle(event,x,y,flags,parami):
             target_x += (x-img_width/2)/ (2**zoom_level)
             target_y += (y-img_height/2)/(2**zoom_level)
         zoom_level+=1
-        print "target_x, target_y", target_x, target_y
+        #print "target_x, target_y", target_x, target_y
         res = res[ y_min:y_max, x_min:x_max]
         res = cv2.resize(res,None,fx=2, fy=2, interpolation = cv2.INTER_CUBIC)
         #res = res[ (x-size/2):(y-size/2), (x+size/2):(y+size/2) ]
@@ -71,6 +109,9 @@ while(1):
         break
 
 cv2.destroyAllWindows()
+'''
+
+
 
 '''import cv2
 events = [i for i in dir(cv2) if 'EVENT' in i]
