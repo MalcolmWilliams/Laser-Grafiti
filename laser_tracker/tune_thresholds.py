@@ -15,7 +15,6 @@ import numpy
 import perspective_shift
 
 
-
 class LaserTracker(object):
 
     def __init__(self, cam_width=640, cam_height=480, hue_min=20, hue_max=160,
@@ -73,12 +72,12 @@ class LaserTracker(object):
         cv2.namedWindow('trackbars')
 
         # create trackbars for hsv ranges
-        cv2.createTrackbar('hue_min','trackbars',0,255,self.nothing)
-        cv2.createTrackbar('hue_max','trackbars',0,255,self.nothing)
-        cv2.createTrackbar('sat_min','trackbars',0,255,self.nothing)
-        cv2.createTrackbar('sat_max','trackbars',0,255,self.nothing)
-        cv2.createTrackbar('val_min','trackbars',0,255,self.nothing)
-        cv2.createTrackbar('val_max','trackbars',0,255,self.nothing)
+        cv2.createTrackbar('hue_min','trackbars',20,256,self.nothing)
+        cv2.createTrackbar('hue_max','trackbars',160,256,self.nothing)
+        cv2.createTrackbar('sat_min','trackbars',100,256,self.nothing)
+        cv2.createTrackbar('sat_max','trackbars',255,256,self.nothing)
+        cv2.createTrackbar('val_min','trackbars',200,256,self.nothing)
+        cv2.createTrackbar('val_max','trackbars',256,256,self.nothing)
         
         # create switch for ON/OFF functionality
         #switch = '0 : OFF \n1 : ON'
@@ -191,19 +190,24 @@ class LaserTracker(object):
         cv2.imshow('frame', frame)
 
 
-        return hsv_image
+        return self.hue_min, self.hue_max, self.sat_min, self.sat_max, self.val_min, self.val_max 
 
 
-lt = LaserTracker()
-#frame = cv2.imread("2016-09-15-171826.jpg" ,cv2.IMREAD_COLOR)
-frame = cv2.imread("Screenshot from 2016-09-15 18-08-29.png" ,cv2.IMREAD_COLOR)
+def manual_tune(frame):
+    lt = LaserTracker()
+    while(1):
+        thresh_vals = lt.detect(frame)
+        #cv2.imshow('trackbars',trackbars)
+        #k = cv2.waitKey(1) & 0xFF
+        #if k == 'a':
+        if cv2.waitKey(33) == ord('a'):
+            cv2.destroyAllWindows()
+            return thresh_vals
 
-#hsv_image = lt.detect(frame)
-#cv2.waitKey(0)
-
-while(1):
-    hsv_image = lt.detect(frame)
-    #cv2.imshow('trackbars',trackbars)
-    k = cv2.waitKey(1) & 0xFF
-    if k == 27:
-        break
+if ( __name__ == "__main__"):
+    #frame = cv2.imread("2016-09-15-171826.jpg" ,cv2.IMREAD_COLOR)
+    #frame = cv2.imread("Screenshot from 2016-09-15 18-08-29.png" ,cv2.IMREAD_COLOR)
+    frame = cv2.imread("Screenshot from 2016-09-19 18-50-01.png" ,cv2.IMREAD_COLOR)
+    #hsv_image = lt.detect(frame)
+    #cv2.waitKey(0)
+    manual_tune(frame)

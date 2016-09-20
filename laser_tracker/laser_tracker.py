@@ -4,11 +4,16 @@ import argparse
 import cv2
 import numpy
 import perspective_shift
+import tune_thresholds
 
 class LaserTracker(object):
-
+    '''
     def __init__(self, cam_width=640, cam_height=480, hue_min=20, hue_max=160,
                  sat_min=100, sat_max=255, val_min=200, val_max=256,
+                 display_thresholds=False,device_num=0):
+    '''
+    def __init__(self, cam_width=640, cam_height=480, hue_min=20, hue_max=145,
+                 sat_min=50, sat_max=255, val_min=175, val_max=256,
                  display_thresholds=False,device_num=0):
         """
         * ``cam_width`` x ``cam_height`` -- This should be the size of the
@@ -51,6 +56,16 @@ class LaserTracker(object):
         self.previous_position = None
         self.trail = numpy.zeros((self.cam_height, self.cam_width, 3),
                                  numpy.uint8)
+        self.mode = "THRESH_CALIBRATE"
+
+    def set_thresh(self, thresh_values):
+        self.hue_min = thresh_values[0]
+        self.hue_max = thresh_values[1]
+        self.sat_min = thresh_values[2]
+        self.sat_max = thresh_values[3]
+        self.val_min = thresh_values[4]
+        self.val_max = thresh_values[5]
+
 
     def create_and_position_window(self, name, xpos, ypos):
         """Creates a named widow placing it on the screen at (xpos, ypos)."""
@@ -91,10 +106,12 @@ class LaserTracker(object):
         )
         return self.capture
 
-    def handle_quit(self, delay=10):
-        """Quit the program if the user presses "Esc" or "q"."""
+    def handle_key(self, delay=10):
+        """ Handle the keyboard shortcuts """
         key = cv2.waitKey(delay)
         c = chr(key & 255)
+        if c in ['t', 'T']:
+            self.mode = "THRESH_CALIBRATE"
         if c in ['c', 'C']:
             self.trail = numpy.zeros((self.cam_height, self.cam_width, 3),
                                      numpy.uint8)
@@ -158,7 +175,7 @@ class LaserTracker(object):
                 center = int(x), int(y)
 
             # only proceed if the radius meets a minimum size
-            if radius > 10:
+            if radius > 1:
                 # draw the circle and centroid on the frame,
                 cv2.circle(frame, (int(x), int(y)), int(radius),
                            (0, 255, 255), 2)
@@ -241,6 +258,7 @@ class LaserTracker(object):
         self.setup_camera_capture(self.device_num)
         # Run the screen finding routine
         warpMatrix, size = perspective_shift.find_screen(self.capture)
+        success, frame = perspective_shift.get_warp(self.capture, warpMatrix, size)
         while True:
             # 1. capture the current image
             # success, frame = self.capture.read()
@@ -249,10 +267,14 @@ class LaserTracker(object):
             if not success:  # no image captured... end the processing
                 sys.stderr.write("Could not read camera frame. Quitting\n")
                 sys.exit(1)
-
-            hsv_image = self.detect(frame)
-            self.display(hsv_image, frame)
-            self.handle_quit()
+            if(self.mode == "THRESH_CALIBRATE"):
+                thresh_values = tune_thresholds.manual_tune(frame)
+                self.set_thresh(thresh_values)
+                self.mode = "RUN"
+            elif(self.mode == "RUN"):    
+                hsv_image = self.detect(frame)
+                self.display(hsv_image, frame)
+            self.handle_key()
 
 
 if __name__ == '__main__':
