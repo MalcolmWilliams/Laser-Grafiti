@@ -13,7 +13,8 @@ import argparse
 import cv2
 import numpy
 import perspective_shift
-
+import LaserFinder
+from scipy.optimize import minimize
 
 class LaserTracker(object):
 
@@ -61,10 +62,24 @@ class LaserTracker(object):
         self.previous_position = None
         self.trail = numpy.zeros((self.cam_height, self.cam_width, 3),
                                  numpy.uint8)
-        self.createTrackbars()
+        #self.createTrackbars()
+
+    def set_thresh(self, thresh_values):
+        self.hue_min = thresh_values[0]
+        self.hue_max = thresh_values[1]
+        self.sat_min = thresh_values[2]
+        self.sat_max = thresh_values[3]
+        self.val_min = thresh_values[4]
+        self.val_max = thresh_values[5]
+
+    def get_thresh(self):
+        return self.hue_min, self.hue_max, self.sat_min, self.hue_max, self.val_min, self.val_max
+
 
     def nothing(self,x):
         pass
+
+
     
     def createTrackbars(self):
         # Create a black image, a window
@@ -72,12 +87,12 @@ class LaserTracker(object):
         cv2.namedWindow('trackbars')
 
         # create trackbars for hsv ranges
-        cv2.createTrackbar('hue_min','trackbars',20,256,self.nothing)
-        cv2.createTrackbar('hue_max','trackbars',160,256,self.nothing)
-        cv2.createTrackbar('sat_min','trackbars',100,256,self.nothing)
-        cv2.createTrackbar('sat_max','trackbars',255,256,self.nothing)
-        cv2.createTrackbar('val_min','trackbars',200,256,self.nothing)
-        cv2.createTrackbar('val_max','trackbars',256,256,self.nothing)
+        cv2.createTrackbar('hue_min','trackbars',int(self.hue_min),256,self.nothing)
+        cv2.createTrackbar('hue_max','trackbars',int(self.hue_max),256,self.nothing)
+        cv2.createTrackbar('sat_min','trackbars',int(self.sat_min),256,self.nothing)
+        cv2.createTrackbar('sat_max','trackbars',int(self.sat_max),256,self.nothing)
+        cv2.createTrackbar('val_min','trackbars',int(self.val_min),256,self.nothing)
+        cv2.createTrackbar('val_max','trackbars',int(self.val_max),256,self.nothing)
         
         # create switch for ON/OFF functionality
         #switch = '0 : OFF \n1 : ON'
@@ -120,27 +135,41 @@ class LaserTracker(object):
             # is split
             self.channels['hue'] = cv2.bitwise_not(self.channels['hue'])
 
-    def track(self, frame, mask):
-        """
-        Track the position of the laser pointer.
+            
+    def auto_detect(self, frame):
+        hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        Code taken from
-        http://www.pyimagesearch.com/2015/09/14/ball-tracking-with-opencv/
-        """
-        center = None
+        # split the video frame into color channels
+        h, s, v = cv2.split(hsv_img)
+        self.channels['hue'] = h
+        self.channels['saturation'] = s
+        self.channels['value'] = v
 
-        countours = cv2.findContours(mask, cv2.RETR_EXTERNAL,
-                                     cv2.CHAIN_APPROX_SIMPLE)[-2]
+        # Threshold ranges of HSV components; storing the results in place
+        self.threshold_image("hue")
+        self.threshold_image("saturation")
+        self.threshold_image("value")
 
-        # only proceed if at least one contour was found
-        if len(countours) > 0:
-            # find the largest contour in the mask, then use
-            # it to compute the minimum enclosing circle and
-            # centroid
-            c = max(countours, key=cv2.contourArea)
-            ((x, y), radius) = cv2.minEnclosingCircle(c)
-            moments = cv2.moments(c)
+        # Perform an AND on HSV components to identify the laser!
+        self.channels['laser'] = cv2.bitwise_and(
+            self.channels['hue'],
+            self.channels['value']
+        )
+        self.channels['laser'] = cv2.bitwise_and(
+            self.channels['saturation'],
+            self.channels['laser']
+        )
 
+        '''
+        # Merge the HSV components back together.
+        hsv_image = cv2.merge([
+            self.channels['hue'],
+            self.channels['saturation'],
+            self.channels['value'],
+        ])
+        '''
+
+        return (self.channels['hue']).astype(numpy.uint8),  (self.channels['saturation']).astype(numpy.uint8),  (self.channels['value']).astype(numpy.uint8),  (self.channels['laser']).astype(numpy.uint8)
 
     def detect(self, frame):
         hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -188,15 +217,135 @@ class LaserTracker(object):
         cv2.imshow('Saturation', self.channels['saturation'])
         cv2.imshow('Value', self.channels['value'])
         cv2.imshow('frame', frame)
-
-
         return self.hue_min, self.hue_max, self.sat_min, self.sat_max, self.val_min, self.val_max 
 
+    def make_laser_mask(self, laser_location):
+        self.laser_mask = numpy.zeros((self.cam_height, self.cam_width), numpy.uint8)
+        cv2.circle(self.laser_mask,(laser_location[0], laser_location[1]),int(laser_location[2]),(255),-1)
+        cv2.imshow("laser_mask", self.laser_mask) 
 
-def manual_tune(frame):
+    def set_frame(self, frame):
+        self.frame = frame
+        self.cam_width = frame.shape[1]
+        self.cam_height = frame.shape[0]
+
+    def cost(self, img1, img2):
+        #returning the lowest value will give the best result
+        mult = 1000
+        '''
+        print type(img1)
+        print type(img2)
+       
+        print len(img1)
+        print len(img2)
+
+        print img1.shape
+        print img2.shape
+        '''
+        img_xor = cv2.bitwise_xor(img1, img2)
+        img_and = cv2.bitwise_and(img1, img2)
+        #cv2.imshow("img_xor", img_xor)
+        #cv2.imshow("img_and", img_and)
+        sum_xor = numpy.sum(img_xor)
+        sum_and = numpy.sum(img_and)
+        return sum_xor - (sum_and * mult)
+
+    def get_cost(self, new_thresh):
+        self.set_thresh(new_thresh)
+        return self.cost(self.laser_mask, self.auto_detect(self.frame)[3])
+
+    def get_cost_hue(self, new_thresh):
+        self.hue_min = new_thresh[0]
+        self.hue_max = new_thresh[1]
+        return self.cost(self.laser_mask, self.auto_detect(self.frame)[0])
+    
+    def get_cost_sat(self, new_thresh):
+        self.sat_min = new_thresh[0]
+        self.sat_max = new_thresh[1]
+        return self.cost(self.laser_mask, self.auto_detect(self.frame)[1])
+    
+    def get_cost_val(self, new_thresh):
+        self.val_min = new_thresh[0]
+        self.val_max = new_thresh[1]
+        return self.cost(self.laser_mask, self.auto_detect(self.frame)[2])
+
+    def get_cost_hue(self):
+        return self.cost(self.laser_mask, self.auto_detect(self.frame)[0]) 
+    
+    def get_cost_sat(self):
+        return self.cost(self.laser_mask, self.auto_detect(self.frame)[1]) 
+    
+    def get_cost_val(self):
+        return self.cost(self.laser_mask, self.auto_detect(self.frame)[2]) 
+    
+    def get_cost_laser(self):
+        return self.cost(self.laser_mask, self.auto_detect(self.frame)[3]) 
+
+
+    def tune_hue(self):
+        self.hue_min = 0
+        self.hue_max = 256
+        last_cost = self.get_cost_hue()
+        while(1):
+            cost = self.get_cost_hue()
+            if(last_cost < cost):
+                self.hue_max = self.hue_max + 1
+                break
+            self.hue_max = self.hue_max -1
+            last_cost = cost
+            if (self.hue_max == self.hue_min):
+                return self.hue_min, self.hue_max+1
+        return self.hue_min, self.hue_max
+
+    def tune_sat(self):
+        self.sat_min = 0
+        self.sat_max = 256
+        last_cost = self.get_cost_sat()
+        self.sat_max= 255
+        while(1):
+            cost = self.get_cost_sat() 
+            if (last_cost < cost):
+                self.sat_max = self.sat_max+1
+                break
+            self.sat_max = self.sat_max - 1
+            last_cost = cost
+            if(self.sat_max == 1):
+                return self.sat_min, self.sat_max
+        #last_cost = self.get_cost_sat()
+        while(1):
+            cost = self.get_cost_sat()
+            if (last_cost < cost):
+                self.sat_min = self.sat_min-1
+                break
+            self.sat_min =self.sat_min + 1
+            last_cost = cost
+            if (self.sat_min == self.sat_max):
+                return self.sat_min -1, self.sat_max
+        return self.sat_min, self.sat_max
+
+    def tune_val(self):
+        self.val_max = 256
+        self.val_min = 0
+        last_cost = self.get_cost_val()
+        while(1):
+            cost = self.get_cost_val()
+            if(last_cost < cost):
+                self.val_min = self.val_min - 1
+                break
+            self.val_min = self.val_min+1
+            last_cost = cost
+            if(self.val_min == self.val_max):
+                return self.val_min -1, self.val_max
+        return self.val_min, self.val_max
+
+
+def manual_tune(frame, thresh_current):
     lt = LaserTracker()
+    lt.createTrackbars()
+    lt.set_thresh(thresh_current)
     while(1):
         thresh_vals = lt.detect(frame)
+        #print len(thresh_vals)
         #cv2.imshow('trackbars',trackbars)
         #k = cv2.waitKey(1) & 0xFF
         #if k == 'a':
@@ -204,10 +353,65 @@ def manual_tune(frame):
             cv2.destroyAllWindows()
             return thresh_vals
 
+def auto_tune(frame, thresh_current):
+    limits = ( (0, 256), (0, 256),(0, 256),(0, 256),(0, 256),(0, 256))
+    limits2 = ( (0, 256), (0, 256))
+
+    lt = LaserTracker()
+    lt.set_frame(frame)
+     
+    lf = LaserFinder.LaserFinder(frame) 
+    laser_location = lf.find_laser();
+    #print laser_location
+    #laser_location = (224, 198, 5)
+
+    lt.make_laser_mask(laser_location)
+   
+    
+    print "pre optimization:", thresh_current
+
+    #thresh_hue = thresh_current[:2]
+    #thresh_sat = thresh_current[2:4]
+    #thresh_val = thresh_current[4:]
+    #print thresh_hue, thresh_sat, thresh_val
+
+    #res = minimize(lt.get_cost_hue, thresh_hue, method='nelder-mead', options={'disp': True})
+    #thresh_hue = res.x
+    thresh_hue = lt.tune_hue()
+    #res = minimize(lt.get_cost_sat, thresh_sat, method='nelder-mead', options={'disp': True})
+    #thresh_sat = res.x
+    thresh_sat = lt.tune_sat()
+    #res = minimize(lt.get_cost_val, thresh_val, method='nelder-mead', options={'disp': True})
+    #thresh_val = res.x       
+ 
+    thresh_val = lt.tune_val()
+
+    thresh_current = numpy.concatenate((thresh_hue, thresh_sat, thresh_val))
+    #thresh_current = numpy.concatenate(thresh_current, thresh_val) 
+
+    #res = minimize(lt.get_cost, thresh_current, method='nelder-mead', options={'disp': True})
+    #thresh_vals = res.x
+    thresh_vals = thresh_current
+    lt.set_thresh(thresh_vals)
+    
+    print "post optimization:", thresh_vals
+    #print res.thresh_current
+    lt.createTrackbars()
+    while(1):
+        thresh_vals = lt.detect(frame)
+
+        if cv2.waitKey(33) == ord('a'):
+            cv2.destroyAllWindows()
+            return thresh_vals
+
+
 if ( __name__ == "__main__"):
     #frame = cv2.imread("2016-09-15-171826.jpg" ,cv2.IMREAD_COLOR)
+    frame = cv2.imread("image.jpg")
     #frame = cv2.imread("Screenshot from 2016-09-15 18-08-29.png" ,cv2.IMREAD_COLOR)
-    frame = cv2.imread("Screenshot from 2016-09-19 18-50-01.png" ,cv2.IMREAD_COLOR)
+    #frame = cv2.imread("Screenshot from 2016-09-19 18-50-01.png" ,cv2.IMREAD_COLOR)
     #hsv_image = lt.detect(frame)
     #cv2.waitKey(0)
-    manual_tune(frame)
+    #manual_tune(frame, (20, 160, 100, 255, 200, 256) )
+    auto_tune(frame, (20, 160, 100, 255, 200, 256) )
+    #auto_tune(frame, (85, 118, 11, 135, 174, 237) )

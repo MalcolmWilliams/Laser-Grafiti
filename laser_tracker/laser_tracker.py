@@ -58,6 +58,12 @@ class LaserTracker(object):
                                  numpy.uint8)
         self.mode = "THRESH_CALIBRATE"
 
+    def set_cam_size(self, size):
+        self.cam_height = size[1]
+        self.cam_width = size[0]
+        self.trail = numpy.zeros((self.cam_height, self.cam_width, 3),
+                                 numpy.uint8)
+
     def set_thresh(self, thresh_values):
         self.hue_min = thresh_values[0]
         self.hue_max = thresh_values[1]
@@ -65,6 +71,9 @@ class LaserTracker(object):
         self.sat_max = thresh_values[3]
         self.val_min = thresh_values[4]
         self.val_max = thresh_values[5]
+
+    def get_thresh(self):
+        return self.hue_min, self.hue_max, self.sat_min, self.hue_max, self.val_min, self.val_max
 
 
     def create_and_position_window(self, name, xpos, ypos):
@@ -258,7 +267,9 @@ class LaserTracker(object):
         self.setup_camera_capture(self.device_num)
         # Run the screen finding routine
         warpMatrix, size = perspective_shift.find_screen(self.capture)
+        #self.set_cam_size(size)
         success, frame = perspective_shift.get_warp(self.capture, warpMatrix, size)
+        cv2.imwrite("image.jpg", frame)
         while True:
             # 1. capture the current image
             # success, frame = self.capture.read()
@@ -268,7 +279,7 @@ class LaserTracker(object):
                 sys.stderr.write("Could not read camera frame. Quitting\n")
                 sys.exit(1)
             if(self.mode == "THRESH_CALIBRATE"):
-                thresh_values = tune_thresholds.manual_tune(frame)
+                thresh_values = tune_thresholds.auto_tune(frame, self.get_thresh())
                 self.set_thresh(thresh_values)
                 self.mode = "RUN"
             elif(self.mode == "RUN"):    
