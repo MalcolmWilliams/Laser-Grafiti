@@ -62,7 +62,6 @@ class LaserTracker(object):
         self.previous_position = None
         self.trail = numpy.zeros((self.cam_height, self.cam_width, 3),
                                  numpy.uint8)
-        #self.createTrackbars()
 
     def set_thresh(self, thresh_values):
         self.hue_min = thresh_values[0]
@@ -75,12 +74,9 @@ class LaserTracker(object):
     def get_thresh(self):
         return self.hue_min, self.hue_max, self.sat_min, self.hue_max, self.val_min, self.val_max
 
-
     def nothing(self,x):
         pass
 
-
-    
     def createTrackbars(self):
         # Create a black image, a window
         trackbars = numpy.zeros((1,512,3), numpy.uint8)
@@ -93,17 +89,7 @@ class LaserTracker(object):
         cv2.createTrackbar('sat_max','trackbars',int(self.sat_max),256,self.nothing)
         cv2.createTrackbar('val_min','trackbars',int(self.val_min),256,self.nothing)
         cv2.createTrackbar('val_max','trackbars',int(self.val_max),256,self.nothing)
-        
-        # create switch for ON/OFF functionality
-        #switch = '0 : OFF \n1 : ON'
-        #cv2.createTrackbar(switch, 'image',0,1,nothing)
-
-        #while(1):
         cv2.imshow('trackbars',trackbars)
-        #k = cv2.waitKey(1) & 0xFF
-        #if k == 27:
-        #    break
-
 
     def threshold_image(self, channel):
         if channel == "hue":
@@ -160,15 +146,6 @@ class LaserTracker(object):
             self.channels['laser']
         )
 
-        '''
-        # Merge the HSV components back together.
-        hsv_image = cv2.merge([
-            self.channels['hue'],
-            self.channels['saturation'],
-            self.channels['value'],
-        ])
-        '''
-
         return (self.channels['hue']).astype(numpy.uint8),  (self.channels['saturation']).astype(numpy.uint8),  (self.channels['value']).astype(numpy.uint8),  (self.channels['laser']).astype(numpy.uint8)
 
     def detect(self, frame):
@@ -202,13 +179,13 @@ class LaserTracker(object):
             self.channels['saturation'],
             self.channels['laser']
         )
-
+        '''
         # Merge the HSV components back together.
         hsv_image = cv2.merge([
             self.channels['hue'],
             self.channels['saturation'],
             self.channels['value'],
-        ])
+        ])'''
 
         #self.track(frame, self.channels['laser'])
 
@@ -250,25 +227,6 @@ class LaserTracker(object):
         sum_and = numpy.sum(img_and)
         return sum_xor - (sum_and * mult)
 
-    def get_cost(self, new_thresh):
-        self.set_thresh(new_thresh)
-        return self.cost(self.laser_mask, self.auto_detect(self.frame)[3])
-
-    def get_cost_hue(self, new_thresh):
-        self.hue_min = new_thresh[0]
-        self.hue_max = new_thresh[1]
-        return self.cost(self.laser_mask, self.auto_detect(self.frame)[0])
-    
-    def get_cost_sat(self, new_thresh):
-        self.sat_min = new_thresh[0]
-        self.sat_max = new_thresh[1]
-        return self.cost(self.laser_mask, self.auto_detect(self.frame)[1])
-    
-    def get_cost_val(self, new_thresh):
-        self.val_min = new_thresh[0]
-        self.val_max = new_thresh[1]
-        return self.cost(self.laser_mask, self.auto_detect(self.frame)[2])
-
     def get_cost_hue(self):
         return self.cost(self.laser_mask, self.auto_detect(self.frame)[0]) 
     
@@ -280,7 +238,6 @@ class LaserTracker(object):
     
     def get_cost_laser(self):
         return self.cost(self.laser_mask, self.auto_detect(self.frame)[3]) 
-
 
     def tune_hue(self):
         self.hue_min = 0
@@ -345,10 +302,6 @@ def manual_tune(frame, thresh_current):
     lt.set_thresh(thresh_current)
     while(1):
         thresh_vals = lt.detect(frame)
-        #print len(thresh_vals)
-        #cv2.imshow('trackbars',trackbars)
-        #k = cv2.waitKey(1) & 0xFF
-        #if k == 'a':
         if cv2.waitKey(33) == ord('a'):
             cv2.destroyAllWindows()
             return thresh_vals
@@ -361,40 +314,22 @@ def auto_tune(frame, thresh_current):
     lt.set_frame(frame)
      
     lf = LaserFinder.LaserFinder(frame) 
-    laser_location = lf.find_laser();
+    #laser_location = lf.find_laser();
     #print laser_location
-    #laser_location = (224, 198, 5)
-
+    laser_location = (197, 249, 3)   #For testing, uncomment this line and comment the one above
     lt.make_laser_mask(laser_location)
    
     
-    print "pre optimization:", thresh_current
+    #print "pre optimization:", thresh_current
 
-    #thresh_hue = thresh_current[:2]
-    #thresh_sat = thresh_current[2:4]
-    #thresh_val = thresh_current[4:]
-    #print thresh_hue, thresh_sat, thresh_val
-
-    #res = minimize(lt.get_cost_hue, thresh_hue, method='nelder-mead', options={'disp': True})
-    #thresh_hue = res.x
     thresh_hue = lt.tune_hue()
-    #res = minimize(lt.get_cost_sat, thresh_sat, method='nelder-mead', options={'disp': True})
-    #thresh_sat = res.x
     thresh_sat = lt.tune_sat()
-    #res = minimize(lt.get_cost_val, thresh_val, method='nelder-mead', options={'disp': True})
-    #thresh_val = res.x       
- 
     thresh_val = lt.tune_val()
 
-    thresh_current = numpy.concatenate((thresh_hue, thresh_sat, thresh_val))
-    #thresh_current = numpy.concatenate(thresh_current, thresh_val) 
-
-    #res = minimize(lt.get_cost, thresh_current, method='nelder-mead', options={'disp': True})
-    #thresh_vals = res.x
-    thresh_vals = thresh_current
+    thresh_vals = numpy.concatenate((thresh_hue, thresh_sat, thresh_val))
     lt.set_thresh(thresh_vals)
     
-    print "post optimization:", thresh_vals
+    #print "post optimization:", thresh_vals
     #print res.thresh_current
     lt.createTrackbars()
     while(1):
@@ -406,12 +341,6 @@ def auto_tune(frame, thresh_current):
 
 
 if ( __name__ == "__main__"):
-    #frame = cv2.imread("2016-09-15-171826.jpg" ,cv2.IMREAD_COLOR)
-    frame = cv2.imread("image.jpg")
-    #frame = cv2.imread("Screenshot from 2016-09-15 18-08-29.png" ,cv2.IMREAD_COLOR)
-    #frame = cv2.imread("Screenshot from 2016-09-19 18-50-01.png" ,cv2.IMREAD_COLOR)
-    #hsv_image = lt.detect(frame)
-    #cv2.waitKey(0)
+    frame = cv2.imread("autotune_laser_test_image.jpg")
     #manual_tune(frame, (20, 160, 100, 255, 200, 256) )
     auto_tune(frame, (20, 160, 100, 255, 200, 256) )
-    #auto_tune(frame, (85, 118, 11, 135, 174, 237) )

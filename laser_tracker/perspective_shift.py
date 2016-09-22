@@ -47,7 +47,7 @@ def find_screen(vid):
         # our output rectangle in top-left, top-right, bottom-right,
         # and bottom-left order
         
-        if (screenCnt != None):
+        if (screenCnt is not None ):
             pts = screenCnt.reshape(4, 2)
             rect = np.zeros((4, 2), dtype = "float32")
 
