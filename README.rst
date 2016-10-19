@@ -1,3 +1,20 @@
+
+Usage:
+1) Find your webcam. (use "ls /dev", generally built in webcam will be video0, a plugged in usb cam will be video1)
+2) Edit run.sh to reflect your webcam (change the -D 0 parameter)
+3) ``./run.sh``
+4) Lots of windows will open. the "warp" window is the important one. It should show just the projector. hit 'a' when it does.
+5) The windows are closed and the calibration window is open. first tell the program where the laser is. (right click zoom in, left click and drag to draw a circle around laser dot, 'a' to accept)
+6) By default it will now attempt to auto calibrate hsv thresholds. the 'laser' window will show how well the calibration worked. The levels can be manually adjusteed with the sliders.
+7) When the thresholds are good, hit 'a' to accept. 
+8) You are now brought back to the original window and laser tracking will start.
+9) At any time hit 'c' to clear, 't' to redo calibration and 'q' to quit
+
+
+
+
+Original Laser Tracker documentation: 
+
 python laser tracker
 ====================
 
