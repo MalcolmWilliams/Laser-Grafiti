@@ -13,11 +13,91 @@ import argparse
 import cv2
 import numpy
 import perspective_shift
-import LaserFinder
-from scipy.optimize import minimize
+import math
+#import LaserFinder
+#from scipy.optimize import minimize
+
+
+
+class LaserFinder( object ):
+
+    def __init__(self, img):
+
+        self.drawing = False # true if mouse is pressed
+        self.ix,self.iy = -1,-1
+        #size = 512
+        #img = np.zeros((size,size,3), np.uint8)
+        #img = cv2.imread("2016-09-15-171826.jpg", cv2.IMREAD_COLOR)
+        self.img_height, self.img_width = img.shape[:2]
+        self.target_x, self.target_y = 0, 0
+        self.zoom_level = 0
+        self.dist = 0
+        self.img = img
+   
+    # mouse callback function
+    def draw_circle(self, event,x,y,flags,parami):
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            #drawing = True
+            self.ix,self.iy = x,y
+            self.target_x += (x-self.img_width/2)/(2**self.zoom_level)
+            self.target_y += (y-self.img_height/2)/(2**self.zoom_level)
+            
+        elif event == cv2.EVENT_LBUTTONUP:
+            #drawing = False
+            cur_x, cur_y = x, y
+            self.dist = math.sqrt( (cur_x-self.ix) **2 + (cur_y-self.iy)**2)
+            cv2.circle(self.img,(self.ix,self.iy),int(self.dist),(0,0,255),1)
+             
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            #print "x, y", x,y
+            #zoom in on the target x and y coords.
+            #img = cv2.resize(img,(2*width, 2*height))
+            res = self.img.copy()
+            x_min = x-self.img_width/4
+            x_max = x+self.img_width/4
+            y_min = y-self.img_height/4
+            y_max = y+self.img_height/4
+            if(x_min < 0): 
+                x_max -= x_min
+                x_min = 0
+            if(y_min < 0):
+                y_max -= y_min
+                y_min = 0
+            if(x_max > self.img_width):
+                x_min = x_min - x_max + self.img_width
+                x_max = self.img_width
+            if(y_max > self.img_height):
+                y_min = y_min - y_max + self.img_height
+                Y_max = self.img_height
+            if(self.zoom_level == 0):
+                self.target_x += x
+                self.target_y += y
+            else:
+                self.target_x += (x-self.img_width/2)/ (2**self.zoom_level)
+                self.target_y += (y-self.img_height/2)/(2**self.zoom_level)
+            self.zoom_level+=1
+            #print "target_x, target_y", target_x, target_y
+            res = res[ y_min:y_max, x_min:x_max]
+            res = cv2.resize(res,None,fx=2, fy=2, interpolation = cv2.INTER_CUBIC)
+            #res = res[ (x-size/2):(y-size/2), (x+size/2):(y+size/2) ]
+            self.img = res
+            #cv2.imshow("res", res)
+
+    def find_laser(self):
+        cv2.namedWindow('image')
+        cv2.setMouseCallback('image',self.draw_circle)
+
+        while(1):
+            cv2.imshow('image',self.img)
+            if cv2.waitKey(33) == ord('a'):
+                cv2.destroyAllWindows()
+                return self.target_x, self.target_y, (self.dist/2**self.zoom_level)
+
+
+
 
 class LaserTracker(object):
-
     def __init__(self, cam_width=640, cam_height=480, hue_min=20, hue_max=160,
                  sat_min=100, sat_max=255, val_min=200, val_max=256,
                  display_thresholds=False,device_num=0):
@@ -313,10 +393,10 @@ def auto_tune(frame, thresh_current):
     lt = LaserTracker()
     lt.set_frame(frame)
      
-    lf = LaserFinder.LaserFinder(frame) 
-    #laser_location = lf.find_laser();
+    lf = LaserFinder(frame) 
+    laser_location = lf.find_laser();
     #print laser_location
-    laser_location = (197, 249, 3)   #For testing, uncomment this line and comment the one above
+    #laser_location = (197, 249, 3)   #For testing, uncomment this line and comment the one above
     lt.make_laser_mask(laser_location)
    
     
@@ -338,6 +418,8 @@ def auto_tune(frame, thresh_current):
         if cv2.waitKey(33) == ord('a'):
             cv2.destroyAllWindows()
             return thresh_vals
+
+
 
 
 if ( __name__ == "__main__"):
