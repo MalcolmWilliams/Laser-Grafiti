@@ -1,22 +1,19 @@
 # Testing ground for various filters to find the laser.
 
-# Desired functionality: 
-# 1) Press space to pause webcam feed
-# 2) Zoom in and click on laser. (Draw a circle around it?)
-# 3) program tunes threshold values (H, S, V) to get best tracking
-# 4) Press space to resume normal operation. 
+# Functionality
+# 1) A still is supplied.
+# 2) Zoom in on the laser (Right click)
+# 3) Draw a cricle around the laser (Left Click and Drag)
+# 4) Hit 'a' to accept
+# 5) It will autotune the HSV thresholds.
+# 6) Manual touchups can be done if the autotuning is not succesful.
 
-
-#! /usr/bin/env python
 import sys
 import argparse
 import cv2
 import numpy
 import perspective_shift
 import math
-#import LaserFinder
-#from scipy.optimize import minimize
-
 
 
 class LaserFinder( object ):

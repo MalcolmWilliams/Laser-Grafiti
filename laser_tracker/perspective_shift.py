@@ -115,10 +115,6 @@ def get_warp(vid, M, size):
     return success, warp
     #cv2.imshow("warp", warp)
 
-
-
-
-
 if(__name__ == "__main__"):
     vid = cv2.VideoCapture(1)
     warpMatrix, size = find_screen(vid)
