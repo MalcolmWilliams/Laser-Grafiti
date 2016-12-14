@@ -17,6 +17,8 @@ Usage:
 9) At any time hit 'c' to clear, 't' to redo calibration and 'q' to quit
 
 
+This program was based on "Python Laser Tracker". See below for details.
+
 Python Laser Tracker
 ====================
 
