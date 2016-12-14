@@ -1,6 +1,8 @@
 Laser-Grafiti
 *************
 
+This program lets you draw with a laser pointer. A camera plus OpenCV will find the laser and trace a line using a projector. The program controls the image recognition, projector drawing and perspective warping. 
+
 Usage:
 ------
 
@@ -15,7 +17,7 @@ Usage:
 9) At any time hit 'c' to clear, 't' to redo calibration and 'q' to quit
 
 
-python laser tracker
+Python Laser Tracker
 ====================
 
 This is a OpenCV application that applies filters in order to track specific HSV ranges. By default, it tracks a red laser pointer, but it is modular and you can track about whatever you want.
