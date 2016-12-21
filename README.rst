@@ -1,8 +1,10 @@
 Laser-Grafiti
-=============
+*************
+
+This program lets you draw with a laser pointer. A camera plus OpenCV will find the laser and trace a line using a projector. The program controls the image recognition, projector drawing and perspective warping. 
 
 Usage:
-------
+++++++
 
 1) Find your webcam. (use ``ls /dev``, generally built in webcam will be video0, a plugged in usb cam will be video1)
 2) Edit run.sh to reflect your webcam (change the -D 0 parameter)
@@ -15,22 +17,22 @@ Usage:
 9) At any time hit 'c' to clear, 't' to redo calibration and 'q' to quit
 
 
-Original Laser Tracker documentation: 
+This program was based on "Python Laser Tracker". See below for details.
 
-python laser tracker
-====================
+Python Laser Tracker
+********************
 
 This is a OpenCV application that applies filters in order to track specific HSV ranges. By default, it tracks a red laser pointer, but it is modular and you can track about whatever you want.
 
 
 Requirments
------------
++++++++++++
 
 This requires Python2 and the Python wrapper for OpenCV.
 It was tested on GNU/Linux distributions and Mac OS X.
 
 Usage
------
++++++
 Run ``python laser_tracker/laser_tracker.py -h`` for help on the available command-line parameters.
 
 
@@ -40,7 +42,7 @@ Range for each HSV components:
     -   value: [0, 255]
 
 About the code
---------------
+++++++++++++++
 The code performs the following steps, and displays the results in several windows. The general idea is to:
 
 1. Grab the video frame.
@@ -55,13 +57,12 @@ The filtering part is done using successive `thresholding <http://docs.opencv.or
 .. image:: img/filtering.png
 
 License
--------
++++++++
 The original code was taken from Brad Montgomery and is available here: https://github.com/bradmontgomery/python-laser-tracker
 This code is MIT-licensed. You can basically do whatever you want with it.
 
-
 Contributing
-------------
+++++++++++++
 
 Any suggestions, bug reports, or pull requests are welcome! If there's
 something I should be doing differently, here, feel free to open an Issue and
